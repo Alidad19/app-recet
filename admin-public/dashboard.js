@@ -311,6 +311,7 @@ document.addEventListener('DOMContentLoaded', () => {
             try {
                 setUploadProgress(10);
                 const releaseTag = 'v' + version.replace(/[^0-9A-Za-z.-]/g, '');
+                const notes = String(updateNotes?.value || '').trim() || 'تحديث تطبيق أمبيرك';
                 const releaseResponse = await fetch('https://api.github.com/repos/Alidad19/app-recet/releases', {
                     method: 'POST',
                     headers: {
@@ -321,7 +322,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     body: JSON.stringify({
                         tag_name: releaseTag,
                         name: 'أمبيرك ' + version,
-                        body: String(updateNotes?.value || '').trim() || 'تحديث تطبيق أمبيرك',
+                        body: notes + '\n\nversionCode: ' + versionCode,
                         draft: false,
                         prerelease: false,
                     }),
@@ -353,27 +354,9 @@ document.addEventListener('DOMContentLoaded', () => {
                     throw new Error(errorBody.message || 'فشل رفع APK إلى GitHub (' + uploadResponse.status + ')');
                 }
 
-                const asset = await uploadResponse.json();
+                await uploadResponse.json();
                 try { localStorage.setItem('amperkGithubToken', githubToken); } catch {}
                 if (githubTokenInput) githubTokenInput.value = '';
-                setUploadProgress(90);
-
-                const metadata = {
-                    version,
-                    versionCode,
-                    notes: String(updateNotes?.value || '').trim(),
-                    fileName: 'Amperk.apk',
-                    downloadUrl: asset.browser_download_url,
-                    releaseUrl: release.html_url,
-                    releaseTag: releaseTag,
-                    size: file.size,
-                    uploadedAt: serverTimestamp(),
-                    uploadedBy: auth.currentUser?.email || '',
-                };
-
-                await setDoc(doc(db, 'app_updates', 'current'), metadata);
-                await addDoc(collection(db, 'app_updates'), metadata);
-
                 setUploadProgress(100);
                 uploadUpdateForm.reset();
                 fetchAppUpdates();
@@ -1457,7 +1440,8 @@ function formatFileSize(bytes) {
 function formatUpdateDate(value) {
     if (!value) return '---';
     if (typeof value.toDate === 'function') return value.toDate().toLocaleString('en-GB');
-    if (value instanceof Date) return value.toLocaleString('en-GB');
+    const date = value instanceof Date ? value : new Date(value);
+    if (!Number.isNaN(date.getTime())) return date.toLocaleString('en-GB');
     return String(value);
 }
 
@@ -1465,20 +1449,32 @@ function fetchAppUpdates() {
     if (!updatesList) return;
     updatesList.innerHTML = '<tr><td class="table-message" colspan="5" style="text-align:center">جارٍ التحميل...</td></tr>';
 
-    getDocs(query(collection(db, 'app_updates'), orderBy('uploadedAt', 'desc')))
-        .then((querySnapshot) => {
-            const entries = [];
-            let current = null;
-
-            querySnapshot.forEach((docSnap) => {
-                const data = docSnap.data();
-                if (docSnap.id === 'current') current = data;
-                else entries.push(data);
+    fetch('https://api.github.com/repos/Alidad19/app-recet/releases?per_page=20', {
+        headers: { 'Accept': 'application/vnd.github+json' },
+    })
+        .then((response) => {
+            if (!response.ok) throw new Error('GitHub API ' + response.status);
+            return response.json();
+        })
+        .then((releases) => {
+            const entries = releases.map((release) => {
+                const apk = (release.assets || []).find((asset) => /\.apk$/i.test(asset.name));
+                const codeMatch = String(release.body || '').match(/versionCode:\s*(\d+)/i);
+                return {
+                    version: String(release.tag_name || '').replace(/^v/, ''),
+                    versionCode: codeMatch ? codeMatch[1] : '---',
+                    size: apk ? apk.size : 0,
+                    uploadedAt: release.published_at || release.created_at,
+                    uploadedBy: release.author?.login || '---',
+                    notes: String(release.body || '').replace(/\n\nversionCode:\s*\d+/i, '').trim(),
+                    releaseUrl: release.html_url,
+                };
             });
 
+            const current = entries[0] || null;
             if (current) {
                 const versionLabel = current.version ? `الإصدار ${current.version}` : '---';
-                const codeLabel = current.versionCode ? ` (#${current.versionCode})` : '';
+                const codeLabel = current.versionCode !== '---' ? ` (#${current.versionCode})` : '';
                 if (currentVersionName) currentVersionName.textContent = versionLabel + codeLabel;
                 if (currentVersionNotes) currentVersionNotes.textContent = current.notes || 'لا توجد ملاحظات لهذا الإصدار.';
                 if (currentVersionMeta) {
@@ -1502,17 +1498,17 @@ function fetchAppUpdates() {
             entries.forEach((data) => {
                 const row = document.createElement('tr');
                 row.innerHTML = `
-                    <td>${escapeHtml(data.version || '---')}</td>
-                    <td>${escapeHtml(String(data.versionCode || '---'))}</td>
+                    <td>${escapeHtml(data.version)}</td>
+                    <td>${escapeHtml(String(data.versionCode))}</td>
                     <td>${escapeHtml(formatFileSize(data.size))}</td>
                     <td>${escapeHtml(formatUpdateDate(data.uploadedAt))}</td>
-                    <td>${escapeHtml(data.uploadedBy || '---')}</td>
+                    <td>${escapeHtml(data.uploadedBy)}</td>
                 `;
                 updatesList.appendChild(row);
             });
         })
         .catch((error) => {
             console.error('Error fetching app updates:', error);
-            updatesList.innerHTML = '<tr><td class="table-message" colspan="5" style="text-align:center">فشل في جلب الإصدارات. تأكد من قواعد Firestore.</td></tr>';
+            updatesList.innerHTML = '<tr><td class="table-message" colspan="5" style="text-align:center">فشل في جلب الإصدارات من GitHub.</td></tr>';
         });
 }
