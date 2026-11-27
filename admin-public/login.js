@@ -32,12 +32,12 @@ async function allowDashboard(user) {
 }
 
 // التعامل مع جلسة مسجّلة مسبقاً (مثلاً بعد تحديث الصفحة)
+// هذا الملف محمّل فقط في صفحة الدخول، لذا نوجه دائماً عند نجاح التحقق
 onAuthStateChanged(auth, async (user) => {
     if (!user) return;
 
-    const isLoginPage = window.location.pathname.includes('login.html');
     if (await allowDashboard(user)) {
-        if (isLoginPage) redirectToDashboard();
+        redirectToDashboard();
     }
 });
 
