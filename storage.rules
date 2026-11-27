@@ -1,0 +1,25 @@
+rules_version = '2';
+service firebase.storage {
+  match /b/{bucket}/o {
+    function isAdmin() {
+      return request.auth != null && request.auth.token.email == 'fefe.411911@gmail.com';
+    }
+
+    // صور الوجه التي يرفعها التطبيق: كل جهاز مصادق عليه يكتب في مساره الخاص
+    match /users/{userId}/{fileName} {
+      allow read: if isAdmin() || (request.auth != null && request.auth.uid == userId);
+      allow write: if isAdmin() || (request.auth != null && request.auth.uid == userId);
+    }
+
+    // ملفات تحديث التطبيق (APK/AAB): القراءة للجميع للتحميل، والكتابة للأدمن فقط
+    match /app_updates/{fileName} {
+      allow read: if true;
+      allow write: if isAdmin();
+    }
+
+    // كل شيء آخر ممنوع
+    match /{allPaths=**} {
+      allow read, write: if false;
+    }
+  }
+}

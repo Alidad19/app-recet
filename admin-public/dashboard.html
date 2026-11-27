@@ -1,0 +1,410 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>لوحة تحكم الإدارة</title>
+    <link rel="stylesheet" href="style.css?v=20261124j">
+    <script src="config.js"></script>
+</head>
+<body>
+    <div class="app-container">
+        <header>
+            <nav id="admin-nav">
+                <button class="nav-btn active" data-target="dashboard-section">المستخدمين</button>
+                <button class="nav-btn" data-target="codes-section">أكواد التفعيل</button>
+                <button class="nav-btn" data-target="requests-section">طلبات التفعيل <span id="pending-requests-count" style="background:#6A82FF;color:#0B0F2A;border-radius:10px;padding:1px 6px;font-size:11px;margin-inline-start:4px;">0</span></button>
+                <button class="nav-btn" data-target="notifications-section">الإشعارات</button>
+                <button class="nav-btn" data-target="updates-section">تحديثات التطبيق</button>
+                <a class="nav-btn nav-btn-site" href="https://app-recet.web.app/app-download.html" target="_blank" rel="noopener noreferrer" title="فتح موقع تحميل التطبيق في تبويب جديد">
+                    موقع التطبيق
+                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="margin-inline-start:5px;vertical-align:-2px">
+                        <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"></path>
+                        <polyline points="15 3 21 3 21 9"></polyline>
+                        <line x1="10" y1="14" x2="21" y2="3"></line>
+                    </svg>
+                </a>
+                <button id="theme-toggle" class="btn btn-secondary" title="تبديل المظهر">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/>
+                    </svg>
+                </button>
+                <button id="logout-btn" class="btn btn-secondary">
+                    تسجيل الخروج
+                </button>
+            </nav>
+        </header>
+
+        <main class="main-content">
+            <!-- Dashboard Section -->
+            <div id="dashboard-section" class="container">
+                <div class="card">
+                    <div class="card-title">
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/>
+                            <polyline points="9 22 9 12 15 12 15 22"/>
+                        </svg>
+                        مستخدمي التطبيق
+                    </div>
+
+                    <div class="summary-grid">
+                        <div class="summary-card">
+                            <span>إجمالي المشتركين</span>
+                            <strong id="total-users-count">0</strong>
+                        </div>
+                        <div class="summary-card">
+                            <span>المفعلين</span>
+                            <strong id="active-users-count">0</strong>
+                        </div>
+                        <div class="summary-card">
+                            <span>غير المفعلين</span>
+                            <strong id="inactive-users-count">0</strong>
+                        </div>
+                    </div>
+
+                    <div id="users-list" class="owner-groups">
+                        <!-- البيانات تُملأ بواسطة JS -->
+                    </div>
+                </div>
+            </div>
+
+            <!-- Codes Section -->
+            <div id="codes-section" class="container">
+                <div class="card">
+                    <div class="card-title">
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/>
+                            <polyline points="9 22 9 12 15 12 15 22"/>
+                        </svg>
+                        إدارة أكواد التفعيل
+                        <button id="generate-code-btn" class="btn btn-primary btn-small">
+                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <line x1="12" y1="5" x2="12" y2="19"></line>
+                                <line x1="5" y1="12" x2="19" y2="12"></line>
+                            </svg>
+                            توليد كود جديد
+                        </button>
+                    </div>
+
+                    <div class="summary-grid">
+                        <div class="summary-card">
+                            <span>إجمالي الأكواد</span>
+                            <strong id="total-codes-count">0</strong>
+                        </div>
+                        <div class="summary-card">
+                            <span>الأكواد المتاحة</span>
+                            <strong id="available-codes-count">0</strong>
+                        </div>
+                        <div class="summary-card">
+                            <span>عدد الأكواد المباعة</span>
+                            <strong id="sold-codes-count">0</strong>
+                        </div>
+                        <div class="summary-card">
+                            <span>إجمالي الإيرادات</span>
+                            <strong id="total-revenue-count">0 د.ع</strong>
+                        </div>
+                    </div>
+
+                    <div class="table-container">
+                        <table class="field-table">
+                            <thead>
+                                <tr>
+                                    <th>الكود</th>
+                                    <th>الحالة</th>
+                                    <th>المدة</th>
+                                    <th>عدد الأيام</th>
+                                    <th>السعر</th>
+                                    <th>المشترك</th>
+                                    <th>تاريخ الإنشاء</th>
+                                    <th>الإجراءات</th>
+                                </tr>
+                            </thead>
+                            <tbody id="codes-list">
+                                <!-- البيانات تُملأ بواسطة JS -->
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Activation Requests Section -->
+            <div id="requests-section" class="container" style="display:none;">
+                <div class="card">
+                    <div class="card-title">طلبات التفعيل</div>
+                    <div class="table-container">
+                        <table class="field-table">
+                            <thead>
+                                <tr>
+                                    <th>الجهاز</th>
+                                    <th>اسم صاحب المولدة</th>
+                                    <th>صورة الوجه</th>
+                                    <th>رقم الهاتف</th>
+                                    <th>العنوان</th>
+                                    <th>الموقع</th>
+                                    <th>التاريخ</th>
+                                    <th>الحالة</th>
+                                    <th>الإجراءات</th>
+                                </tr>
+                            </thead>
+                            <tbody id="requests-list">
+                                <!-- البيانات تُملأ بواسطة JS -->
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Notifications Section -->
+            <div id="notifications-section" class="container" style="display:none;">
+                <div class="card">
+                    <div class="card-title">سجل الإشعارات</div>
+                    <div id="notifications-list" class="notifications-list">
+                        <!-- البيانات تُملأ بواسطة JS -->
+                    </div>
+                </div>
+            </div>
+
+            <!-- App Updates Section -->
+            <div id="updates-section" class="container" style="display:none;">
+                <div class="card">
+                    <div class="card-title">
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+                            <polyline points="17 8 12 3 7 8"></polyline>
+                            <line x1="12" y1="3" x2="12" y2="15"></line>
+                        </svg>
+                        تحديثات التطبيق
+                        <a class="btn btn-secondary btn-small" href="https://alidad19.github.io/app-recet/app-download.html" target="_blank" rel="noopener noreferrer">فتح موقع التحميل</a>
+                    </div>
+
+                    <div class="updates-layout">
+                        <div class="current-version-card" id="current-version-card">
+                            <span class="version-label">الإصدار المنشور حالياً في الموقع</span>
+                            <strong id="current-version-name">---</strong>
+                            <p id="current-version-notes">لم يتم رفع أي تحديث بعد.</p>
+                            <div class="version-meta" id="current-version-meta"></div>
+                        </div>
+
+                        <form id="upload-update-form" class="upload-update-form">
+                            <div class="form-group">
+                                <label for="update-apk-file">ملف التطبيق (APK)</label>
+                                <input type="file" id="update-apk-file" accept=".apk,application/vnd.android.package-archive" required>
+                            </div>
+                            <div class="form-row">
+                                <div class="form-group">
+                                    <label for="update-version-name">اسم الإصدار</label>
+                                    <input type="text" id="update-version-name" placeholder="مثال: 1.2.0" required autocomplete="off">
+                                </div>
+                                <div class="form-group">
+                                    <label for="update-version-code">رقم الإصدار</label>
+                                    <input type="number" id="update-version-code" placeholder="مثال: 12" min="1" step="1" required>
+                                </div>
+                            </div>
+                            <div class="form-group">
+                                <label for="update-notes">ملاحظات التحديث (اختياري)</label>
+                                <textarea id="update-notes" rows="3" placeholder="ما الجديد في هذا الإصدار؟"></textarea>
+                            </div>
+                            <div class="form-group">
+                                <label for="github-token-input">GitHub Personal Access Token</label>
+                                <input type="password" id="github-token-input" placeholder="ghp_... أو github_pat_..." autocomplete="off">
+                                <p class="upload-hint">يُحفظ الرمز في هذا المتصفح فقط، ولا يُرفع مع ملفات الموقع. أنشئه من GitHub → Settings → Developer settings بصلاحية repo.</p>
+                            </div>
+                            <div class="upload-progress" id="upload-progress" hidden>
+                                <div class="progress-track"><div class="progress-fill" id="upload-progress-fill"></div></div>
+                                <span id="upload-progress-text">0%</span>
+                            </div>
+                            <button type="submit" id="upload-update-btn" class="btn btn-primary">
+                                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+                                    <polyline points="17 8 12 3 7 8"></polyline>
+                                    <line x1="12" y1="3" x2="12" y2="15"></line>
+                                </svg>
+                                رفع التحديث إلى الموقع
+                            </button>
+                            <p class="upload-hint">يُنشأ الإصدار على GitHub Releases ويظهر تلقائياً في موقع التحميل العام.</p>
+                        </form>
+                    </div>
+
+                    <h3 class="sub-title">سجل الإصدارات</h3>
+                    <div class="table-container">
+                        <table class="field-table">
+                            <thead>
+                                <tr>
+                                    <th>الإصدار</th>
+                                    <th>رقم الإصدار</th>
+                                    <th>الحجم</th>
+                                    <th>تاريخ الرفع</th>
+                                    <th>بواسطة</th>
+                                </tr>
+                            </thead>
+                            <tbody id="updates-list">
+                                <!-- البيانات تُملأ بواسطة JS -->
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <!-- Edit User Modal -->
+    <div id="edit-user-modal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3 class="modal-title">تعديل بيانات المستخدم</h3>
+                <button class="modal-close" data-modal="edit-user-modal" aria-label="إغلاق">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <line x1="18" y1="6" x2="6" y2="18"></line>
+                        <line x1="6" y1="6" x2="18" y2="18"></line>
+                    </svg>
+                </button>
+            </div>
+            <div class="modal-body">
+                <p id="edit-error" class="error-msg"></p>
+                <form id="edit-user-form">
+                    <input type="hidden" id="edit-user-id">
+
+                    <div class="form-group">
+                        <label for="edit-owner-name">اسم صاحب المولدة</label>
+                        <input type="text" id="edit-owner-name" placeholder="أدخل الاسم" required autocomplete="off">
+                    </div>
+
+                    <div class="form-group">
+                        <label for="edit-activation-code">كود التفعيل</label>
+                        <input type="text" id="edit-activation-code" placeholder="كود التفعيل" autocomplete="off">
+                    </div>
+
+                    <div class="form-group">
+                        <label for="edit-remaining-days">أيام متبقية</label>
+                        <input type="number" id="edit-remaining-days" placeholder="0" min="0" step="1">
+                    </div>
+
+                    <div class="form-group checkbox-group">
+                        <label class="checkbox-label">
+                            <input type="checkbox" id="edit-activated">
+                            <span class="checkbox-custom"></span>
+                            <span class="checkbox-text">المستخدم مفعل</span>
+                        </label>
+                    </div>
+
+                    <div class="modal-actions">
+                        <button type="button" class="btn btn-secondary" data-modal="edit-user-modal">إلغاء</button>
+                        <button type="submit" class="btn btn-primary">حفظ التعديلات</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- Delete Confirmation Modal -->
+    <div id="delete-confirm-modal" class="modal">
+        <div class="modal-content modal-sm">
+            <div class="modal-header danger">
+                <h3 class="modal-title">تأكيد الحذف</h3>
+            </div>
+            <div class="modal-body">
+                <div class="delete-icon">
+                    <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+                        <polyline points="3 6 5 6 21 6"></polyline>
+                        <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
+                    </svg>
+                </div>
+                <p class="delete-message">هل أنت متأكد من حذف <strong id="delete-user-name"></strong>؟</p>
+                <p class="delete-warning">هذا الإجراء لا يمكن التراجع عنه وسيتم حذف جميع البيانات المرتبطة.</p>
+            </div>
+            <div class="modal-actions">
+                <button type="button" class="btn btn-secondary" data-modal="delete-confirm-modal">إلغاء</button>
+                <button type="button" id="confirm-delete-btn" class="btn btn-danger">حذف نهائياً</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Toggle Activation Modal -->
+    <div id="toggle-activation-modal" class="modal">
+        <div class="modal-content modal-sm">
+            <div class="modal-header" id="toggle-modal-header">
+                <h3 class="modal-title" id="toggle-activation-title">تفعيل المستخدم</h3>
+            </div>
+            <div class="modal-body">
+                <div class="toggle-icon" id="toggle-modal-icon">
+                    <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+                        <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path>
+                        <polyline points="22 4 12 14.01 9 11.01"></polyline>
+                    </svg>
+                </div>
+                <p>هل تريد <strong id="toggle-activation-action-text">تفعيل</strong> المستخدم <strong id="toggle-activation-user-name"></strong>؟</p>
+                <p class="toggle-note" id="toggle-activation-note">سيتم تحديث الحالة فوراً.</p>
+            </div>
+            <div class="modal-actions">
+                <button type="button" class="btn btn-secondary" data-modal="toggle-activation-modal">إلغاء</button>
+                <button type="button" id="confirm-toggle-activation-btn" class="btn btn-primary">تأكيد</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- General Message Modal -->
+    <div id="general-message-modal" class="modal">
+        <div class="modal-content modal-sm">
+            <div class="modal-header" id="general-modal-header">
+                <h3 class="modal-title" id="general-message-title">تنبيه</h3>
+            </div>
+            <div class="modal-body">
+                <p id="general-message-text"></p>
+            </div>
+            <div class="modal-actions">
+                <button type="button" class="btn btn-primary" data-modal="general-message-modal">فهمت</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Code Duration Modal -->
+    <div id="code-duration-modal" class="modal">
+        <div class="modal-content modal-sm">
+            <div class="modal-header">
+                <h3 class="modal-title">مدة الكود</h3>
+            </div>
+            <div class="modal-body">
+                <p>اختر مدة صلاحية الكود:</p>
+                <div class="form-group">
+                    <label for="code-duration-select">المدة</label>
+                    <select id="code-duration-select">
+                        <option value="30" selected>30 يوم (شهر واحد)</option>
+                        <option value="60">60 يوم (شهران)</option>
+                    </select>
+                </div>
+            </div>
+            <div class="modal-actions">
+                <button type="button" class="btn btn-secondary" data-modal="code-duration-modal">إلغاء</button>
+                <button type="button" id="confirm-code-duration-btn" class="btn btn-primary">توليد</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Activate Request Modal -->
+    <div id="activate-request-modal" class="modal">
+        <div class="modal-content modal-sm">
+            <div class="modal-header">
+                <h3 class="modal-title">تفعيل المستخدم</h3>
+            </div>
+            <div class="modal-body">
+                <input type="hidden" id="activate-request-id">
+                <p>سيتم تفعيل المستخدم <strong id="activate-request-name"></strong> مباشرة.</p>
+                <div class="form-group">
+                    <label for="activate-request-duration">مدة الاشتراك</label>
+                    <select id="activate-request-duration">
+                        <option value="1">شهر واحد (30 يوم)</option>
+                        <option value="3" selected>3 أشهر (90 يوم)</option>
+                        <option value="6">6 أشهر (180 يوم)</option>
+                    </select>
+                </div>
+            </div>
+            <div class="modal-actions">
+                <button type="button" class="btn btn-secondary" data-modal="activate-request-modal">إلغاء</button>
+                <button type="button" id="confirm-activate-request-btn" class="btn btn-primary">تفعيل</button>
+            </div>
+        </div>
+    </div>
+
+    <script type="module" src="dashboard.js?v=20261124j"></script>
+</body>
+</html>

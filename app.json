@@ -1,0 +1,69 @@
+{
+  "expo": {
+    "name": "أمبيرك",
+    "slug": "app-recet",
+    "version": "2.7.1",
+    "orientation": "portrait",
+    "icon": "./assets/icon.png",
+    "userInterfaceStyle": "light",
+    "ios": {
+      "supportsTablet": true,
+      "bundleIdentifier": "com.kahraba.recetapp",
+      "runtimeVersion": {
+        "policy": "appVersion"
+      },
+      "infoPlist": {
+        "NSFaceIDUsageDescription": "نحتاج للوصول إلى Face ID لتأمين عمليات الحذف والعمليات الحساسة في التطبيق.",
+        "NSCameraUsageDescription": "نحتاج إلى الكاميرا لالتقاط صورة المشترك.",
+        "NSPhotoLibraryUsageDescription": "نحتاج إلى الاستوديو لاختيار صورة للمشترك.",
+        "NSLocationWhenInUseUsageDescription": "نحتاج إلى موقعك لإرسال موقع صاحب المولدة إلى الإدارة."
+      }
+    },
+    "android": {
+      "package": "com.kahraba.recetapp",
+      "versionCode": 271,
+      "adaptiveIcon": {
+        "foregroundImage": "./assets/adaptive-icon.png",
+        "backgroundColor": "#ffffff"
+      },
+      "runtimeVersion": {
+        "policy": "appVersion"
+      }
+    },
+    "web": {
+      "favicon": "./assets/favicon.png"
+    },
+    "extra": {
+      "eas": {
+        "projectId": "f9987a99-256c-4c1d-9013-969e88d73bc3"
+      }
+    },
+    "plugins": [
+      "expo-sharing",
+      "expo-status-bar",
+      "expo-font",
+      [
+        "expo-location",
+        {
+          "locationWhenInUsePermission": "نحتاج إلى موقعك لإرسال موقع صاحب المولدة إلى الإدارة."
+        }
+      ],
+      [
+        "expo-image-picker",
+        {
+          "photosPermission": "السماح باختيار صورة المشترك من الاستوديو.",
+          "cameraPermission": "السماح بالتقاط صورة المشترك بالكاميرا."
+        }
+      ],
+      [
+        "expo-splash-screen",
+        {
+          "image": "./assets/splash-icon.png",
+          "resizeMode": "contain",
+          "backgroundColor": "#ffffff"
+        }
+      ],
+      "@react-native-google-signin/google-signin"
+    ]
+  }
+}

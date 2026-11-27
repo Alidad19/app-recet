@@ -1,0 +1,80 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // دالة مساعدة للتحقق من المستخدم المصادق
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+
+    // دالة للتحقق من أن المستخدم هو الأدمن المحدد (فقط fefe.411911@gmail.com)
+    function isAdmin() {
+      return isAuthenticated() && request.auth.token.email == 'fefe.411911@gmail.com';
+    }
+
+    // مجموعة الأجهزة (devices) - للقراءة والكتابة: المستخدمون المصادق عليهم (تطبيق الهاتف)
+    match /devices/{deviceId} {
+      allow read: if isAuthenticated();
+      allow write: if isAuthenticated();
+      allow create: if isAuthenticated();
+    }
+
+    // حسابات أصحاب المولدة المرتبطة بـ Gmail: كل صاحب مولدة يملك مستنداً واحداً ب.uid حسابه
+    match /owners/{ownerId} {
+      allow read: if isAuthenticated() && (request.auth.uid == ownerId || isAdmin());
+      allow write: if isAuthenticated() && request.auth.uid == ownerId;
+    }
+
+    // مجموعة أكواد التفعيل (activation_codes)
+    // الأدمن ينشئ/يحذف الأكواد، والتطبيق يستطيع فقط تعليم الكود كمستخدم أثناء التفعيل
+    match /activation_codes/{codeId} {
+      allow read: if isAuthenticated();
+      allow create, delete: if isAdmin();
+      allow update: if isAdmin() || (
+        isAuthenticated() &&
+        resource.data.get('isUsed', false) == false &&
+        request.resource.data.diff(resource.data).affectedKeys().hasOnly(['isUsed', 'deviceId', 'usedAt', 'ownerName', 'ownerPhone']) &&
+        request.resource.data.isUsed == true &&
+        (resource.data.get('deviceId', '') == '' || request.resource.data.deviceId == resource.data.deviceId)
+      );
+    }
+
+    // مجموعة إعدادات التطبيق (appConfig) - للقراءة: المستخدمون المصادق عليهم، للكتابة: الأدمن فقط
+    match /appConfig/{docId} {
+      allow read: if isAuthenticated();
+      allow write: if isAdmin();
+    }
+
+    // طلبات التفعيل - المستخدم العادي يرسل طلبه ويقرأ حالته، والأدمن يعتمد الطلب
+    match /activation_requests/{requestId} {
+      allow read: if isAuthenticated();
+      allow create: if isAuthenticated() && request.resource.data.deviceId == requestId;
+      allow update: if isAuthenticated() && (isAdmin() || resource.data.deviceId == requestId);
+      allow delete: if isAdmin() || (isAuthenticated() && resource.data.deviceId == requestId);
+    }
+
+    // طلبات المشغلين - يرسلها ويحذفها المستخدمون المصادق عليهم، والأدمن يتولاها
+    match /operator_requests/{requestId} {
+      allow read: if isAuthenticated();
+      allow create: if isAuthenticated();
+      allow update, delete: if isAuthenticated();
+    }
+
+    // إشعارات الداشبورد - تُكتب وتُقرأ من المستخدمين المصادق عليهم
+    match /admin_notifications/{notificationId} {
+      allow read: if isAuthenticated();
+      allow create: if isAuthenticated();
+      allow update, delete: if isAdmin();
+    }
+
+    // إصدارات تحديث التطبيق - القراءة للجميع، الكتابة للأدمن فقط
+    match /app_updates/{docId} {
+      allow read: if isAuthenticated();
+      allow create, update, delete: if isAdmin();
+    }
+
+    // Default deny for everything else
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}
