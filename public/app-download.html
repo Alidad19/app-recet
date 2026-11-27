@@ -218,7 +218,7 @@
                 })
                 .then(function (release) {
                     var asset = (release.assets || []).find(function (item) {
-                        return item.name === assetName;
+                        return item.name === assetName || item.label === assetName || /\.apk$/i.test(item.name);
                     });
                     var url = asset ? asset.browser_download_url : release.html_url;
                     if (button) button.href = url;
