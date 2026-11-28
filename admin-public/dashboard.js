@@ -1,8 +1,7 @@
-import { auth, db, storage } from './firebase-config.js';
+import { auth, db } from './firebase-config.js';
 import { getAdminAccess } from './admin-config.js';
 import { onAuthStateChanged, signOut } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js';
 import { addDoc, collection, getDoc, getDocs, query, where, orderBy, doc, updateDoc, deleteDoc, setDoc, serverTimestamp, Timestamp } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js';
-import { ref, uploadBytesResumable, getDownloadURL } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-storage.js';
 
 const adminNav = document.getElementById('admin-nav');
 const dashboardSection = document.getElementById('dashboard-section');
@@ -76,7 +75,6 @@ const manualUploadPanel = document.getElementById('manual-upload-panel');
 const manualReleaseLink = document.getElementById('manual-release-link');
 const ghUploadCommand = document.getElementById('gh-upload-command');
 const copyGhCommandBtn = document.getElementById('copy-gh-command-btn');
-const APK_STORAGE_PATH = 'app_updates/app-release.apk';
 const APP_DOWNLOAD_PAGE = 'https://alidad19.github.io/app-recet/app-download.html';
 const GITHUB_REPO_URL = 'https://github.com/Alidad19/app-recet';
 
