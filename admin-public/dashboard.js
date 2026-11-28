@@ -60,6 +60,9 @@ const currentVersionNotes = document.getElementById('current-version-notes');
 const currentVersionMeta = document.getElementById('current-version-meta');
 const uploadUpdateForm = document.getElementById('upload-update-form');
 const updateApkFile = document.getElementById('update-apk-file');
+const apkDropzone = document.getElementById('apk-dropzone');
+const apkFileName = document.getElementById('apk-file-name');
+const apkFileMeta = document.getElementById('apk-file-meta');
 const updateVersionName = document.getElementById('update-version-name');
 const updateVersionCode = document.getElementById('update-version-code');
 const updateNotes = document.getElementById('update-notes');
@@ -267,6 +270,48 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
+    // زر اختيار ملف APK المودرن
+    function updateApkFileUI() {
+        if (!apkDropzone) return;
+        const file = updateApkFile?.files?.[0];
+        if (file) {
+            apkDropzone.classList.add('has-file');
+            if (apkFileName) apkFileName.textContent = file.name;
+            if (apkFileMeta) apkFileMeta.textContent = formatFileSize(file.size) + ' · جاهز للرفع';
+        } else {
+            apkDropzone.classList.remove('has-file');
+            if (apkFileName) apkFileName.textContent = 'لم يتم اختيار ملف';
+            if (apkFileMeta) apkFileMeta.textContent = 'اضغط لاختيار ملف APK أو اسحبه هنا';
+        }
+    }
+
+    if (updateApkFile) {
+        updateApkFile.addEventListener('change', updateApkFileUI);
+    }
+
+    if (apkDropzone && updateApkFile) {
+        ['dragenter', 'dragover'].forEach((type) => {
+            apkDropzone.addEventListener(type, (event) => {
+                event.preventDefault();
+                apkDropzone.classList.add('is-dragging');
+            });
+        });
+        ['dragleave', 'drop'].forEach((type) => {
+            apkDropzone.addEventListener(type, (event) => {
+                event.preventDefault();
+                apkDropzone.classList.remove('is-dragging');
+            });
+        });
+        apkDropzone.addEventListener('drop', (event) => {
+            const droppedFile = event.dataTransfer?.files?.[0];
+            if (!droppedFile) return;
+            const transfer = new DataTransfer();
+            transfer.items.add(droppedFile);
+            updateApkFile.files = transfer.files;
+            updateApkFileUI();
+        });
+    }
+
     // رفع تحديث التطبيق إلى الموقع العام
     if (uploadUpdateForm) {
         uploadUpdateForm.addEventListener('submit', async (event) => {
@@ -359,6 +404,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 if (githubTokenInput) githubTokenInput.value = '';
                 setUploadProgress(100);
                 uploadUpdateForm.reset();
+                updateApkFileUI();
                 fetchAppUpdates();
                 showGeneralMessage(
                     'تم الرفع بنجاح',

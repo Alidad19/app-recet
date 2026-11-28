@@ -187,8 +187,22 @@
 
                         <form id="upload-update-form" class="upload-update-form">
                             <div class="form-group">
-                                <label for="update-apk-file">ملف التطبيق (APK)</label>
-                                <input type="file" id="update-apk-file" accept=".apk,application/vnd.android.package-archive" required>
+                                <label class="file-field-label" for="update-apk-file">ملف التطبيق (APK)</label>
+                                <div class="file-dropzone" id="apk-dropzone">
+                                    <span class="file-dropzone-icon">
+                                        <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+                                            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+                                            <polyline points="17 8 12 3 7 8"></polyline>
+                                            <line x1="12" y1="3" x2="12" y2="15"></line>
+                                        </svg>
+                                    </span>
+                                    <span class="file-dropzone-copy">
+                                        <strong id="apk-file-name">لم يتم اختيار ملف</strong>
+                                        <small id="apk-file-meta">اضغط لاختيار ملف APK أو اسحبه هنا</small>
+                                    </span>
+                                    <span class="file-dropzone-action">اختيار ملف</span>
+                                    <input type="file" id="update-apk-file" accept=".apk,application/vnd.android.package-archive" required>
+                                </div>
                             </div>
                             <div class="form-row">
                                 <div class="form-group">
