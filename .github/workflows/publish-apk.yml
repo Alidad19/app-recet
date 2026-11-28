@@ -1,0 +1,49 @@
+name: Publish APK from dashboard
+
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'App version (e.g. 2.7.2)'
+        required: true
+      blobs:
+        description: 'Comma separated git blob SHAs'
+        required: true
+      filename:
+        description: 'APK file name'
+        required: true
+
+permissions:
+  contents: write
+  actions: read
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Assemble APK and attach it to the release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          BLOBS: ${{ inputs.blobs }}
+          VERSION: ${{ inputs.version }}
+          FILENAME: ${{ inputs.filename }}
+        run: |
+          set -euo pipefail
+          tag="v${VERSION}"
+          asset_name="$(basename "$FILENAME")"
+          case "$asset_name" in
+            *.apk) ;;
+            *) asset_name="${asset_name}.apk" ;;
+          esac
+
+          : > "$asset_name"
+          IFS=',' read -ra parts <<< "$BLOBS"
+          for sha in "${parts[@]}"; do
+            sha="$(printf '%s' "$sha" | tr -d '[:space:]')"
+            [ -n "$sha" ] || continue
+            gh api "repos/${GITHUB_REPOSITORY}/git/blobs/${sha}" --jq '.content' | base64 -d >> "$asset_name"
+          done
+
+          gh release upload "$tag" "$asset_name" --repo "$GITHUB_REPOSITORY" --clobber
+          asset_id="$(gh api "repos/${GITHUB_REPOSITORY}/releases/tags/${tag}" --jq ".assets[] | select(.name==\"${asset_name}\") | .id")"
+          gh api -X PATCH "repos/${GITHUB_REPOSITORY}/releases/assets/${asset_id}" -f label=Amperk.apk > /dev/null

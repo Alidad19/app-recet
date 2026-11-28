@@ -86,6 +86,14 @@ function formatGithubError(errorBody, status, fallback) {
     return details ? message + ' (' + details + ')' : message;
 }
 
+function bytesToBase64(bytes) {
+    let binary = '';
+    for (let index = 0; index < bytes.length; index += 0x8000) {
+        binary += String.fromCharCode.apply(null, bytes.subarray(index, index + 0x8000));
+    }
+    return btoa(binary);
+}
+
 let authStateKnown = false;
 
 if (generateCodeBtn) {
@@ -418,26 +426,81 @@ document.addEventListener('DOMContentLoaded', () => {
                 }
                 setUploadProgress(25);
 
-                setUploadProgress(25);
+                // المتصفح لا يستطيع الرفع إلى uploads.github.com بسبب CORS،
+                // لذا تُرفع القطع إلى Git Blobs عبر api.github.com ثم ينشرها workflow.
+                const CHUNK_SIZE = 8 * 1024 * 1024;
+                const blobShas = [];
+                for (let offset = 0; offset < file.size; offset += CHUNK_SIZE) {
+                    const chunk = new Uint8Array(await file.slice(offset, offset + CHUNK_SIZE).arrayBuffer());
+                    const blobResponse = await fetch('https://api.github.com/repos/Alidad19/app-recet/git/blobs', {
+                        method: 'POST',
+                        headers: { ...authHeaders, 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ content: bytesToBase64(chunk), encoding: 'base64' }),
+                    });
+                    if (!blobResponse.ok) {
+                        const errorBody = await blobResponse.json().catch(() => ({}));
+                        if (blobResponse.status === 401 || blobResponse.status === 403) {
+                            try { localStorage.removeItem('amperkGithubToken'); } catch {}
+                            if (githubTokenInput) githubTokenInput.value = '';
+                            throw new Error('الرمز غير مصرّح له برفع الملفات. استخدم PAT بصلاحية repo، أو أضف Actions: Read and write للرمز الدقيق.');
+                        }
+                        throw new Error(formatGithubError(errorBody, blobResponse.status, 'فشل رفع ملفات التحديث إلى GitHub'));
+                    }
+                    const blob = await blobResponse.json();
+                    blobShas.push(blob.sha);
+                    setUploadProgress(25 + Math.round(45 * Math.min(file.size, offset + chunk.length) / file.size));
+                }
 
-                // GitHub لا يسمح برفع الملفات من المتصفح إلى uploads.github.com بسبب CORS.
-                // لذلك نجهّز الإصدار عبر api.github.com ثم نُظهر للمستخدم خطوة الإضافة اليدوية.
-                const releasePageUrl = 'https://github.com/Alidad19/app-recet/releases/edit/' + releaseTag;
-                const safeFileName = file.name.replace(/["`$\\]/g, '');
-                const uploadCommand = `gh release upload ${releaseTag} "${safeFileName}" --repo Alidad19/app-recet --clobber`;
-                if (manualReleaseLink) manualReleaseLink.href = releasePageUrl;
-                if (ghUploadCommand) ghUploadCommand.textContent = uploadCommand;
-                if (manualUploadPanel) manualUploadPanel.hidden = false;
+                setUploadProgress(72);
+                const dispatchResponse = await fetch('https://api.github.com/repos/Alidad19/app-recet/actions/workflows/publish-apk.yml/dispatches', {
+                    method: 'POST',
+                    headers: { ...authHeaders, 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        ref: 'master',
+                        inputs: { version, blobs: blobShas.join(','), filename: file.name },
+                    }),
+                });
+                if (!dispatchResponse.ok) {
+                    const errorBody = await dispatchResponse.json().catch(() => ({}));
+                    if (dispatchResponse.status === 401 || dispatchResponse.status === 403) {
+                        try { localStorage.removeItem('amperkGithubToken'); } catch {}
+                        if (githubTokenInput) githubTokenInput.value = '';
+                        throw new Error('الرمز غير مصرّح له بتشغيل النشر. استخدم PAT بصلاحية repo، أو أضف Actions: Read and write للرمز الدقيق.');
+                    }
+                    throw new Error(formatGithubError(errorBody, dispatchResponse.status, 'فشل بدء نشر الإصدار'));
+                }
+
+                let uploadedAsset = null;
+                for (let attempt = 0; attempt < 40 && !uploadedAsset; attempt += 1) {
+                    await new Promise((resolve) => setTimeout(resolve, 5000));
+                    const checkResponse = await fetch('https://api.github.com/repos/Alidad19/app-recet/releases/tags/' + encodeURIComponent(releaseTag), { headers: authHeaders });
+                    if (checkResponse.ok) {
+                        const checkedRelease = await checkResponse.json();
+                        uploadedAsset = (checkedRelease.assets || []).find((asset) => /\.apk$/i.test(asset.name) && Math.abs(asset.size - file.size) < 1024);
+                    }
+                    setUploadProgress(72 + Math.min(25, attempt));
+                }
+
+                if (!uploadedAsset) {
+                    const releasePageUrl = 'https://github.com/Alidad19/app-recet/releases/edit/' + releaseTag;
+                    const safeFileName = file.name.replace(/["`$\\]/g, '');
+                    const uploadCommand = `gh release upload ${releaseTag} "${safeFileName}" --repo Alidad19/app-recet --clobber`;
+                    if (manualReleaseLink) manualReleaseLink.href = releasePageUrl;
+                    if (ghUploadCommand) ghUploadCommand.textContent = uploadCommand;
+                    if (manualUploadPanel) manualUploadPanel.hidden = false;
+                    throw new Error('تم بدء النشر لكن لم يظهر الملف بعد. تحقق من سجل Actions، أو أضف الملف يدوياً من اللوحة الظاهرة أسفل النموذج.');
+                }
 
                 try { localStorage.setItem('amperkGithubToken', githubToken); } catch {}
                 if (githubTokenInput) githubTokenInput.value = '';
+                if (manualUploadPanel) manualUploadPanel.hidden = true;
                 setUploadProgress(100);
                 uploadUpdateForm.reset();
                 updateApkFileUI();
                 fetchAppUpdates();
                 showGeneralMessage(
-                    'الإصدار جاهز',
-                    `تم تجهيز ${releaseTag} على GitHub. أضف ملف APK من زر «افتح صفحة الإصدار» أو بالأمر الظاهر أسفل النموذج، ثم سيظهر تلقائياً في موقع التحميل.`,
+                    'تم الرفع بنجاح',
+                    `تم نشر ${releaseTag} وإرفاق ${uploadedAsset.name} على GitHub Releases. ظهر التحديث في موقع التحميل العام.`,
                     'success'
                 );
             } catch (error) {
@@ -507,6 +570,11 @@ document.addEventListener('DOMContentLoaded', () => {
                 const repo = await repoResponse.json();
                 if (repo.permissions && repo.permissions.push === false) {
                     throw new Error('الرمز للقراءة فقط. امنحه Contents: Read and write ثم أنشئ رمزاً جديداً.');
+                }
+
+                const actionsResponse = await fetch('https://api.github.com/repos/Alidad19/app-recet/actions/workflows', { headers });
+                if (!actionsResponse.ok) {
+                    throw new Error('الرمز لا يستطيع تشغيل Actions. امنحه Actions: Read and write، أو استخدم PAT بصلاحية repo.');
                 }
 
                 showGeneralMessage('الرمز صالح', `مرحباً ${user.login || 'GitHub'}. الرمز يملك صلاحية رفع الإصدارات إلى Alidad19/app-recet.`, 'success');
