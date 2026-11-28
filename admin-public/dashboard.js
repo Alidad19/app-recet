@@ -75,6 +75,15 @@ const uploadProgressText = document.getElementById('upload-progress-text');
 const APK_STORAGE_PATH = 'app_updates/app-release.apk';
 const APP_DOWNLOAD_PAGE = 'https://alidad19.github.io/app-recet/app-download.html';
 const GITHUB_REPO_URL = 'https://github.com/Alidad19/app-recet';
+
+function formatGithubError(errorBody, status, fallback) {
+    const message = errorBody?.message || fallback || 'فشل طلب GitHub (' + status + ')';
+    const details = Array.isArray(errorBody?.errors)
+        ? errorBody.errors.map((item) => item.field || item.code || item.message).filter(Boolean).join('، ')
+        : '';
+    return details ? message + ' (' + details + ')' : message;
+}
+
 let authStateKnown = false;
 
 if (generateCodeBtn) {
@@ -358,34 +367,68 @@ document.addEventListener('DOMContentLoaded', () => {
                 setUploadProgress(10);
                 const releaseTag = 'v' + version.replace(/[^0-9A-Za-z.-]/g, '');
                 const notes = String(updateNotes?.value || '').trim() || 'تحديث تطبيق أمبيرك';
-                const releaseResponse = await fetch('https://api.github.com/repos/Alidad19/app-recet/releases', {
-                    method: 'POST',
-                    headers: {
-                        'Authorization': 'Bearer ' + githubToken,
-                        'Accept': 'application/vnd.github+json',
-                        'Content-Type': 'application/json',
-                    },
-                    body: JSON.stringify({
-                        tag_name: releaseTag,
-                        name: 'أمبيرك ' + version,
-                        body: notes + '\n\nversionCode: ' + versionCode,
-                        draft: false,
-                        prerelease: false,
-                    }),
-                });
+                const authHeaders = {
+                    'Authorization': 'Bearer ' + githubToken,
+                    'Accept': 'application/vnd.github+json',
+                };
 
-                if (!releaseResponse.ok) {
-                    const errorBody = await releaseResponse.json().catch(() => ({}));
-                    if (releaseResponse.status === 401 || releaseResponse.status === 403) {
+                // إعادة استخدام الإصدار الموجود إذا كانت المحاولة السابقة قد أنشأت الوسم بالفعل
+                let release = null;
+                const existingResponse = await fetch(
+                    'https://api.github.com/repos/Alidad19/app-recet/releases/tags/' + encodeURIComponent(releaseTag),
+                    { headers: authHeaders }
+                );
+                if (existingResponse.ok) {
+                    release = await existingResponse.json();
+                } else if (existingResponse.status !== 404) {
+                    const errorBody = await existingResponse.json().catch(() => ({}));
+                    if (existingResponse.status === 401 || existingResponse.status === 403) {
                         try { localStorage.removeItem('amperkGithubToken'); } catch {}
                         if (githubTokenInput) githubTokenInput.value = '';
                         throw new Error('الرمز غير مصرّح له بالرفع. أنشئ PAT جديداً بصلاحية repo (أو Contents: Read and write) للمستودع Alidad19/app-recet ثم أعد إدخاله.');
                     }
-                    throw new Error(errorBody.message || 'فشل إنشاء الإصدار في GitHub (' + releaseResponse.status + ')');
+                    throw new Error(formatGithubError(errorBody, existingResponse.status, 'فشل البحث عن الإصدار في GitHub'));
                 }
 
-                const release = await releaseResponse.json();
+                if (!release) {
+                    const releaseResponse = await fetch('https://api.github.com/repos/Alidad19/app-recet/releases', {
+                        method: 'POST',
+                        headers: { ...authHeaders, 'Content-Type': 'application/json' },
+                        body: JSON.stringify({
+                            tag_name: releaseTag,
+                            name: 'أمبيرك ' + version,
+                            body: notes + '\n\nversionCode: ' + versionCode,
+                            draft: false,
+                            prerelease: false,
+                        }),
+                    });
+
+                    if (!releaseResponse.ok) {
+                        const errorBody = await releaseResponse.json().catch(() => ({}));
+                        if (releaseResponse.status === 401 || releaseResponse.status === 403) {
+                            try { localStorage.removeItem('amperkGithubToken'); } catch {}
+                            if (githubTokenInput) githubTokenInput.value = '';
+                            throw new Error('الرمز غير مصرّح له بالرفع. أنشئ PAT جديداً بصلاحية repo (أو Contents: Read and write) للمستودع Alidad19/app-recet ثم أعد إدخاله.');
+                        }
+                        throw new Error(formatGithubError(errorBody, releaseResponse.status, 'فشل إنشاء الإصدار في GitHub'));
+                    }
+                    release = await releaseResponse.json();
+                }
                 setUploadProgress(25);
+
+                // استبدال ملف APK السابق في نفس الإصدار عند إعادة المحاولة
+                const assetsResponse = await fetch('https://api.github.com/repos/Alidad19/app-recet/releases/' + release.id + '/assets', { headers: authHeaders });
+                if (assetsResponse.ok) {
+                    const assets = await assetsResponse.json();
+                    for (const asset of assets) {
+                        if (asset.name === 'Amperk.apk') {
+                            await fetch('https://api.github.com/repos/Alidad19/app-recet/releases/assets/' + asset.id, {
+                                method: 'DELETE',
+                                headers: authHeaders,
+                            });
+                        }
+                    }
+                }
 
                 const uploadResponse = await fetch(
                     'https://uploads.github.com/repos/Alidad19/app-recet/releases/' + release.id + '/assets?name=Amperk.apk',
@@ -407,7 +450,7 @@ document.addEventListener('DOMContentLoaded', () => {
                         if (githubTokenInput) githubTokenInput.value = '';
                         throw new Error('الرمز لا يملك صلاحية رفع الملفات. استخدم رمزاً بصلاحية repo أو Contents: Read and write.');
                     }
-                    throw new Error(errorBody.message || 'فشل رفع APK إلى GitHub (' + uploadResponse.status + ')');
+                    throw new Error(formatGithubError(errorBody, uploadResponse.status, 'فشل رفع APK إلى GitHub'));
                 }
 
                 await uploadResponse.json();
