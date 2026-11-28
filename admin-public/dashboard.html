@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>لوحة تحكم الإدارة</title>
-    <link rel="stylesheet" href="style.css?v=20261124j">
+    <link rel="stylesheet" href="style.css?v=20261128b">
     <script src="config.js"></script>
 </head>
 <body>
@@ -224,7 +224,7 @@
                                 <p class="upload-hint">
                                     أنشئه من <a href="https://github.com/settings/tokens/new?scopes=repo&amp;description=Amperk%20Dashboard" target="_blank" rel="noopener">GitHub → Developer settings</a>
                                     بصلاحية <strong>repo</strong> (الرمز القديم <code>ghp_...</code>)، أو بصلاحية <strong>Contents: Read and write</strong> (الرمز الدقيق <code>github_pat_...</code>) على مستودع <code>Alidad19/app-recet</code>.
-                                    يُحفظ الرمز في هذا المتصفح فقط بعد نجاح الرفع.
+                                    يُحفظ الرمز في هذا المتصفح فقط بعد نجاح تجهيز الإصدار.
                                 </p>
                                 <button type="button" id="verify-github-token-btn" class="btn btn-secondary btn-small">التحقق من الرمز</button>
                             </div>
@@ -238,9 +238,17 @@
                                     <polyline points="17 8 12 3 7 8"></polyline>
                                     <line x1="12" y1="3" x2="12" y2="15"></line>
                                 </svg>
-                                رفع التحديث إلى الموقع
+                                تجهيز الإصدار على GitHub
                             </button>
-                            <p class="upload-hint">يُنشأ الإصدار على GitHub Releases ويظهر تلقائياً في موقع التحميل العام.</p>
+                            <div id="manual-upload-panel" class="manual-upload-panel" hidden>
+                                <strong>الإصدار جاهز — أضف ملف APK يدوياً</strong>
+                                <p>لا يسمح GitHub برفع الملفات من المتصفح مباشرة (CORS)، لذا أكمل الخطوة الأخيرة من صفحة الإصدار أو بأمر واحد على جهازك:</p>
+                                <a id="manual-release-link" class="btn btn-primary btn-small" href="#" target="_blank" rel="noopener">افتح صفحة الإصدار لإضافة APK</a>
+                                <p>أو شغّل هذا الأمر في مجلد الملف:</p>
+                                <code id="gh-upload-command"></code>
+                                <button type="button" id="copy-gh-command-btn" class="btn btn-secondary btn-small">نسخ الأمر</button>
+                            </div>
+                            <p class="upload-hint">يُنشأ الإصدار على GitHub Releases، وبعد إضافة APK يظهر تلقائياً في موقع التحميل العام.</p>
                         </form>
                     </div>
 
@@ -424,6 +432,6 @@
         </div>
     </div>
 
-    <script type="module" src="dashboard.js?v=20261128b"></script>
+    <script type="module" src="dashboard.js?v=20261128c"></script>
 </body>
 </html>

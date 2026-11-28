@@ -72,6 +72,10 @@ const uploadUpdateBtn = document.getElementById('upload-update-btn');
 const uploadProgress = document.getElementById('upload-progress');
 const uploadProgressFill = document.getElementById('upload-progress-fill');
 const uploadProgressText = document.getElementById('upload-progress-text');
+const manualUploadPanel = document.getElementById('manual-upload-panel');
+const manualReleaseLink = document.getElementById('manual-release-link');
+const ghUploadCommand = document.getElementById('gh-upload-command');
+const copyGhCommandBtn = document.getElementById('copy-gh-command-btn');
 const APK_STORAGE_PATH = 'app_updates/app-release.apk';
 const APP_DOWNLOAD_PAGE = 'https://alidad19.github.io/app-recet/app-download.html';
 const GITHUB_REPO_URL = 'https://github.com/Alidad19/app-recet';
@@ -416,44 +420,17 @@ document.addEventListener('DOMContentLoaded', () => {
                 }
                 setUploadProgress(25);
 
-                // استبدال ملف APK السابق في نفس الإصدار عند إعادة المحاولة
-                const assetsResponse = await fetch('https://api.github.com/repos/Alidad19/app-recet/releases/' + release.id + '/assets', { headers: authHeaders });
-                if (assetsResponse.ok) {
-                    const assets = await assetsResponse.json();
-                    for (const asset of assets) {
-                        if (asset.name === 'Amperk.apk') {
-                            await fetch('https://api.github.com/repos/Alidad19/app-recet/releases/assets/' + asset.id, {
-                                method: 'DELETE',
-                                headers: authHeaders,
-                            });
-                        }
-                    }
-                }
+                setUploadProgress(25);
 
-                const uploadResponse = await fetch(
-                    'https://uploads.github.com/repos/Alidad19/app-recet/releases/' + release.id + '/assets?name=Amperk.apk',
-                    {
-                        method: 'POST',
-                        headers: {
-                            'Authorization': 'Bearer ' + githubToken,
-                            'Accept': 'application/vnd.github+json',
-                            'Content-Type': 'application/vnd.android.package-archive',
-                        },
-                        body: file,
-                    }
-                );
+                // GitHub لا يسمح برفع الملفات من المتصفح إلى uploads.github.com بسبب CORS.
+                // لذلك نجهّز الإصدار عبر api.github.com ثم نُظهر للمستخدم خطوة الإضافة اليدوية.
+                const releasePageUrl = 'https://github.com/Alidad19/app-recet/releases/edit/' + releaseTag;
+                const safeFileName = file.name.replace(/["`$\\]/g, '');
+                const uploadCommand = `gh release upload ${releaseTag} "${safeFileName}" --repo Alidad19/app-recet --clobber`;
+                if (manualReleaseLink) manualReleaseLink.href = releasePageUrl;
+                if (ghUploadCommand) ghUploadCommand.textContent = uploadCommand;
+                if (manualUploadPanel) manualUploadPanel.hidden = false;
 
-                if (!uploadResponse.ok) {
-                    const errorBody = await uploadResponse.json().catch(() => ({}));
-                    if (uploadResponse.status === 401 || uploadResponse.status === 403) {
-                        try { localStorage.removeItem('amperkGithubToken'); } catch {}
-                        if (githubTokenInput) githubTokenInput.value = '';
-                        throw new Error('الرمز لا يملك صلاحية رفع الملفات. استخدم رمزاً بصلاحية repo أو Contents: Read and write.');
-                    }
-                    throw new Error(formatGithubError(errorBody, uploadResponse.status, 'فشل رفع APK إلى GitHub'));
-                }
-
-                await uploadResponse.json();
                 try { localStorage.setItem('amperkGithubToken', githubToken); } catch {}
                 if (githubTokenInput) githubTokenInput.value = '';
                 setUploadProgress(100);
@@ -461,8 +438,8 @@ document.addEventListener('DOMContentLoaded', () => {
                 updateApkFileUI();
                 fetchAppUpdates();
                 showGeneralMessage(
-                    'تم الرفع بنجاح',
-                    `تم نشر الإصدار ${version} على GitHub Releases. افتح صفحة التحميل من زر «موقع التطبيق».`,
+                    'الإصدار جاهز',
+                    `تم تجهيز ${releaseTag} على GitHub. أضف ملف APK من زر «افتح صفحة الإصدار» أو بالأمر الظاهر أسفل النموذج، ثم سيظهر تلقائياً في موقع التحميل.`,
                     'success'
                 );
             } catch (error) {
@@ -476,6 +453,19 @@ document.addEventListener('DOMContentLoaded', () => {
                         setUploadProgress(0);
                     }, 1200);
                 }
+            }
+        });
+    }
+
+    if (copyGhCommandBtn) {
+        copyGhCommandBtn.addEventListener('click', async () => {
+            const text = String(ghUploadCommand?.textContent || '').trim();
+            if (!text) return;
+            try {
+                await navigator.clipboard.writeText(text);
+                showGeneralMessage('تم النسخ', 'تم نسخ الأمر. الصقه في Terminal داخل مجلد ملف APK.', 'success');
+            } catch {
+                showGeneralMessage('تعذر النسخ', 'حدد نص الأمر ونسخه يدوياً.', 'error');
             }
         });
     }
