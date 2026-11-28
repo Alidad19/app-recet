@@ -67,6 +67,7 @@ const updateVersionName = document.getElementById('update-version-name');
 const updateVersionCode = document.getElementById('update-version-code');
 const updateNotes = document.getElementById('update-notes');
 const githubTokenInput = document.getElementById('github-token-input');
+const verifyGithubTokenBtn = document.getElementById('verify-github-token-btn');
 const uploadUpdateBtn = document.getElementById('upload-update-btn');
 const uploadProgress = document.getElementById('upload-progress');
 const uploadProgressFill = document.getElementById('upload-progress-fill');
@@ -375,6 +376,11 @@ document.addEventListener('DOMContentLoaded', () => {
 
                 if (!releaseResponse.ok) {
                     const errorBody = await releaseResponse.json().catch(() => ({}));
+                    if (releaseResponse.status === 401 || releaseResponse.status === 403) {
+                        try { localStorage.removeItem('amperkGithubToken'); } catch {}
+                        if (githubTokenInput) githubTokenInput.value = '';
+                        throw new Error('الرمز غير مصرّح له بالرفع. أنشئ PAT جديداً بصلاحية repo (أو Contents: Read and write) للمستودع Alidad19/app-recet ثم أعد إدخاله.');
+                    }
                     throw new Error(errorBody.message || 'فشل إنشاء الإصدار في GitHub (' + releaseResponse.status + ')');
                 }
 
@@ -396,6 +402,11 @@ document.addEventListener('DOMContentLoaded', () => {
 
                 if (!uploadResponse.ok) {
                     const errorBody = await uploadResponse.json().catch(() => ({}));
+                    if (uploadResponse.status === 401 || uploadResponse.status === 403) {
+                        try { localStorage.removeItem('amperkGithubToken'); } catch {}
+                        if (githubTokenInput) githubTokenInput.value = '';
+                        throw new Error('الرمز لا يملك صلاحية رفع الملفات. استخدم رمزاً بصلاحية repo أو Contents: Read and write.');
+                    }
                     throw new Error(errorBody.message || 'فشل رفع APK إلى GitHub (' + uploadResponse.status + ')');
                 }
 
@@ -422,6 +433,56 @@ document.addEventListener('DOMContentLoaded', () => {
                         setUploadProgress(0);
                     }, 1200);
                 }
+            }
+        });
+    }
+
+    // التحقق من صلاحيات رمز GitHub قبل الرفع
+    if (verifyGithubTokenBtn) {
+        verifyGithubTokenBtn.addEventListener('click', async () => {
+            const token = String(githubTokenInput?.value || '').trim();
+            if (!token) {
+                showGeneralMessage('تنبيه', 'أدخل GitHub Personal Access Token أولاً.', 'error');
+                return;
+            }
+
+            verifyGithubTokenBtn.disabled = true;
+            try {
+                const headers = {
+                    'Authorization': 'Bearer ' + token,
+                    'Accept': 'application/vnd.github+json',
+                };
+
+                const userResponse = await fetch('https://api.github.com/user', { headers });
+                if (!userResponse.ok) {
+                    if (userResponse.status === 401) {
+                        throw new Error('الرمز غير صالح أو منتهي. أنشئ رمزاً جديداً.');
+                    }
+                    throw new Error('تعذر التحقق من الرمز (' + userResponse.status + ').');
+                }
+                const user = await userResponse.json();
+
+                if (token.startsWith('ghp_')) {
+                    const scopes = userResponse.headers.get('x-oauth-scopes') || '';
+                    if (!/(^|,\s*)(repo|public_repo)(\s*,|$)/.test(scopes)) {
+                        throw new Error('الرمز القديم يحتاج صلاحية repo (أو public_repo). أنشئه من رابط «Developer settings» ثم أعد إدخاله.');
+                    }
+                }
+
+                const repoResponse = await fetch('https://api.github.com/repos/Alidad19/app-recet', { headers });
+                if (!repoResponse.ok) {
+                    throw new Error('الرمز لا يستطيع الوصول إلى المستودع Alidad19/app-recet (' + repoResponse.status + ').');
+                }
+                const repo = await repoResponse.json();
+                if (repo.permissions && repo.permissions.push === false) {
+                    throw new Error('الرمز للقراءة فقط. امنحه Contents: Read and write ثم أنشئ رمزاً جديداً.');
+                }
+
+                showGeneralMessage('الرمز صالح', `مرحباً ${user.login || 'GitHub'}. الرمز يملك صلاحية رفع الإصدارات إلى Alidad19/app-recet.`, 'success');
+            } catch (error) {
+                showGeneralMessage('فشل التحقق', error?.message || String(error), 'error');
+            } finally {
+                verifyGithubTokenBtn.disabled = false;
             }
         });
     }

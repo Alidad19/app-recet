@@ -221,7 +221,12 @@
                             <div class="form-group">
                                 <label for="github-token-input">GitHub Personal Access Token</label>
                                 <input type="password" id="github-token-input" placeholder="ghp_... أو github_pat_..." autocomplete="off">
-                                <p class="upload-hint">يُحفظ الرمز في هذا المتصفح فقط، ولا يُرفع مع ملفات الموقع. أنشئه من GitHub → Settings → Developer settings بصلاحية repo.</p>
+                                <p class="upload-hint">
+                                    أنشئه من <a href="https://github.com/settings/tokens/new?scopes=repo&amp;description=Amperk%20Dashboard" target="_blank" rel="noopener">GitHub → Developer settings</a>
+                                    بصلاحية <strong>repo</strong> (الرمز القديم <code>ghp_...</code>)، أو بصلاحية <strong>Contents: Read and write</strong> (الرمز الدقيق <code>github_pat_...</code>) على مستودع <code>Alidad19/app-recet</code>.
+                                    يُحفظ الرمز في هذا المتصفح فقط بعد نجاح الرفع.
+                                </p>
+                                <button type="button" id="verify-github-token-btn" class="btn btn-secondary btn-small">التحقق من الرمز</button>
                             </div>
                             <div class="upload-progress" id="upload-progress" hidden>
                                 <div class="progress-track"><div class="progress-fill" id="upload-progress-fill"></div></div>
